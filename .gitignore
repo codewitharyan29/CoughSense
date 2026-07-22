@@ -1,0 +1,26 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.Python
+*.egg-info/
+
+# Large data — don't commit the COUGHVID download (2.3GB) or processed arrays
+data/coughvid_download/
+data/processed/*.npz
+
+# Trained models are kept in the repo (they're small, ~3MB) so the app runs
+# immediately after cloning. Uncomment below if you'd rather exclude them:
+# models/*.pt
+# models/*.pkl
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temp audio
+*.tmp
+temp_audio.wav
