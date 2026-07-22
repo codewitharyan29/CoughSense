@@ -11,16 +11,28 @@
   <img src="https://img.shields.io/badge/DL-CNN%20(PyTorch)-orange" alt="DL"/>
   <img src="https://img.shields.io/badge/Best%20Accuracy-85.1%25-brightgreen" alt="Accuracy"/>
   <img src="https://img.shields.io/badge/API-FastAPI-teal" alt="API"/>
+  <img src="https://img.shields.io/badge/Live%20Demo-Render-46E3B7" alt="Live Demo"/>
   <img src="https://img.shields.io/badge/status-prototype-yellow" alt="Status"/>
 </p>
 
 <p align="center"><b>Team Auscultate</b> — Aryan Verma (B.Tech AI) &amp; Arfa Alam (B.Tech Civil Engineering)</p>
+
+<p align="center">
+  🔗 <b><a href="https://coughsense-e3kz.onrender.com/home.html">Live Demo</a></b>
+  &nbsp;·&nbsp;
+  <a href="https://coughsense-e3kz.onrender.com/">Screening Tool</a>
+  &nbsp;·&nbsp;
+  <a href="https://coughsense-e3kz.onrender.com/dashboard.html">Analytics Dashboard</a>
+</p>
+
+<p align="center"><i>Note: hosted on Render's free tier — the app may take 30–60s to wake up on first load after inactivity.</i></p>
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Live Demo](#live-demo)
 - [The Problem](#the-problem)
 - [Our Solution](#our-solution)
 - [Key Value Points](#key-value-points)
@@ -52,6 +64,25 @@ them honestly — a strong demonstration of how the two approaches behave on sma
 
 ---
 
+## Live Demo
+
+The full app — custom frontend + FastAPI backend — is deployed together on Render:
+
+| Page | What it does |
+|---|---|
+| **[Home](https://coughsense-e3kz.onrender.com/home.html)** | Project overview: problem, approach, results, team |
+| **[Screening Tool](https://coughsense-e3kz.onrender.com/)** | Upload or record a cough → live prediction from all 3 models |
+| **[Dashboard](https://coughsense-e3kz.onrender.com/dashboard.html)** | Dataset composition, per-fold CV results, confusion matrices, feature importance |
+
+The deployed version is built from the self-contained [`deploy/`](deploy) folder (its own copy of
+`serve.py`, `frontend/`, `models/`, and a minimal `src/`), so it can be redeployed anywhere that runs a
+Dockerfile — Render, Fly.io, HuggingFace Docker Spaces, etc.
+
+> Render's free tier spins the service down after inactivity — the **first** request after a while may
+> take 30–60 seconds to wake up. Subsequent requests are fast.
+
+---
+
 ## The Problem
 
 Access to respiratory screening is limited in low-resource settings: clinics are far, tests cost money,
@@ -70,7 +101,11 @@ and a clear medical disclaimer, exposed through both a REST API and a browser in
    log-mel spectrograms (for the CNN).
 2. **Three models** — Random Forest, XGBoost, and a compact CNN — trained and cross-validated.
 3. **Explainability** — SHAP analysis showing *why* the model predicts what it does.
-4. **Web app** — a live screening tool + an analytics dashboard.
+4. **Next-steps guidance** — a result-specific panel with general public-health guidance (get a
+   confirmatory test, isolate, monitor symptoms, when to seek emergency care) — always deferring to a
+   real test and a healthcare professional, never prescribing treatment.
+5. **Web app** — a live screening tool + an analytics dashboard, deployed together (frontend + backend
+   in one container).
 
 ---
 
@@ -87,6 +122,8 @@ and a clear medical disclaimer, exposed through both a REST API and a browser in
   gradient-boosted trees beat deep learning.
 - **A genuine data-quality experiment** — we tested scaling the data and learned *why quality beats
   quantity* in medical ML (details below).
+- **Actionable, responsible guidance** — a result triggers general public-health next steps (get tested,
+  isolate, monitor, when to seek emergency care), not a diagnosis or treatment prescription.
 - **Deployable** — runs fully locally on free tooling; FastAPI backend + static frontend.
 
 ---
@@ -184,9 +221,17 @@ cough-detect/
 │   └── processed/          # extracted features + spectrograms
 ├── models/                 # trained models (RF, XGBoost, CNN)
 ├── frontend/
+│   ├── home.html           # project overview / landing page
 │   ├── index.html          # live screening tool
 │   ├── dashboard.html      # analytics dashboard
 │   └── favicon.svg
+├── deploy/                 # self-contained copy for Docker deployment (Render, HF Spaces, etc.)
+│   ├── Dockerfile
+│   ├── serve.py             # backend + serves the frontend together
+│   ├── requirements.txt
+│   ├── frontend/            # copy of the 3 pages above
+│   ├── models/               # copy of the trained models
+│   └── src/                  # copy of features.py + dl_model.py
 ├── reports/
 │   ├── CoughSense_Technical_Report.docx
 │   ├── figures/            # SHAP, ROC, confusion matrices
@@ -317,7 +362,8 @@ Prints a per-clip table (actual vs. each model's prediction vs. consensus) and s
 - Multimodal fusion — combine cough audio with a short self-reported symptom form.
 - Grad-CAM visualizations of the spectrogram regions the CNN attends to.
 - Extend to additional respiratory conditions (asthma, bronchitis, TB).
-- A guidance layer that turns a screening result into clear next steps.
+- A conversational assistant layer on top of the current next-steps guidance, for more personalized
+  (but still non-prescriptive) follow-up questions.
 
 ---
 
