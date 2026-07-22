@@ -432,7 +432,7 @@
 </div>
 
 <script>
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "";  // same-origin: frontend and backend served together
 
 const canvas = document.getElementById('waveform');
 const ctx = canvas.getContext('2d');
@@ -622,7 +622,7 @@ function renderResults(data) {
   results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-fetch(`${API_BASE}/`)
+fetch(`${API_BASE}/api/health`)
   .then(res => res.json())
   .then(() => {
     const badge = document.getElementById('apiStatus');
