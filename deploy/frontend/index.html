@@ -507,6 +507,29 @@ function drawStaticWaveform(buffer) {
   ctx.stroke();
 }
 
+// ---- Playhead sync: redraws the waveform + a moving line at current playback position ----
+let currentAudioBuffer = null;
+
+function drawWaveformWithPlayhead() {
+  if (!currentAudioBuffer) return;
+  drawStaticWaveform(currentAudioBuffer);
+  const player = document.getElementById('audioPlayer');
+  if (player.duration && !isNaN(player.duration)) {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const x = (player.currentTime / player.duration) * w;
+    ctx.strokeStyle = '#FFB86B';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+}
+
+document.getElementById('audioPlayer').addEventListener('timeupdate', drawWaveformWithPlayhead);
+document.getElementById('audioPlayer').addEventListener('seeking', drawWaveformWithPlayhead);
+document.getElementById('audioPlayer').addEventListener('ended', drawWaveformWithPlayhead);
+
 const recordBtn = document.getElementById('recordBtn');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const filenameEl = document.getElementById('filename');
@@ -529,7 +552,7 @@ recordBtn.addEventListener('click', async () => {
       chunks = [];
       mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = e => chunks.push(e.data);
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         audioBlob = new Blob(chunks, { type: 'audio/webm' });
         filenameEl.textContent = `Recorded clip (${(audioBlob.size/1024).toFixed(0)} KB)`;
         analyzeBtn.disabled = false;
@@ -538,6 +561,16 @@ recordBtn.addEventListener('click', async () => {
         const player = document.getElementById('audioPlayer');
         player.src = URL.createObjectURL(audioBlob);
         player.style.display = 'block';
+
+        // Decode the recording so the waveform can show a synced playhead
+        try {
+          const arrayBuffer = await audioBlob.arrayBuffer();
+          const tempCtx2 = new (window.AudioContext || window.webkitAudioContext)();
+          currentAudioBuffer = await tempCtx2.decodeAudioData(arrayBuffer);
+          drawStaticWaveform(currentAudioBuffer);
+        } catch (err) {
+          currentAudioBuffer = null;
+        }
       };
       mediaRecorder.start();
       isRecording = true;
@@ -571,8 +604,10 @@ fileInput.addEventListener('change', async (e) => {
   const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
   try {
     const audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
+    currentAudioBuffer = audioBuffer;
     drawStaticWaveform(audioBuffer);
   } catch (err) {
+    currentAudioBuffer = null;
     drawIdleLine();
   }
 });
