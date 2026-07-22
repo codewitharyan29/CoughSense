@@ -391,6 +391,11 @@
       <div class="confidence" id="rfConf">—</div>
     </div>
     <div class="model-row">
+      <div class="model-name">XGBoost (best)</div>
+      <div class="bar-track"><div class="bar-fill" id="xgbBar"></div></div>
+      <div class="confidence" id="xgbConf">—</div>
+    </div>
+    <div class="model-row">
       <div class="model-name">CNN (audio)</div>
       <div class="bar-track"><div class="bar-fill" id="cnnBar"></div></div>
       <div class="confidence" id="cnnConf">—</div>
@@ -599,9 +604,11 @@ function renderResults(data) {
   results.classList.add('show');
 
   const rf = data.random_forest;
+  const xgb = data.xgboost;
   const cnn = data.cnn;
 
   const rfClass = rf.prediction === 'healthy' ? 'healthy' : 'covid';
+  const xgbClass = xgb.prediction === 'healthy' ? 'healthy' : 'covid';
   const cnnClass = cnn.prediction === 'healthy' ? 'healthy' : 'covid';
 
   document.getElementById('rfBar').className = `bar-fill ${rfClass}`;
@@ -609,15 +616,24 @@ function renderResults(data) {
   document.getElementById('rfConf').className = `confidence ${rfClass}`;
   document.getElementById('rfConf').textContent = `${(rf.confidence * 100).toFixed(0)}%`;
 
+  document.getElementById('xgbBar').className = `bar-fill ${xgbClass}`;
+  document.getElementById('xgbBar').style.width = `${xgb.confidence * 100}%`;
+  document.getElementById('xgbConf').className = `confidence ${xgbClass}`;
+  document.getElementById('xgbConf').textContent = `${(xgb.confidence * 100).toFixed(0)}%`;
+
   document.getElementById('cnnBar').className = `bar-fill ${cnnClass}`;
   document.getElementById('cnnBar').style.width = `${cnn.confidence * 100}%`;
   document.getElementById('cnnConf').className = `confidence ${cnnClass}`;
   document.getElementById('cnnConf').textContent = `${(cnn.confidence * 100).toFixed(0)}%`;
 
   const verdictEl = document.getElementById('verdictValue');
-  const consensus = rf.prediction;
-  verdictEl.textContent = consensus.toUpperCase();
-  verdictEl.className = `verdict-value ${consensus === 'healthy' ? 'healthy' : 'covid'}`;
+  // Consensus: simple majority vote across all three models.
+  // XGBoost breaks ties since it's the strongest model per cross-validation.
+  const votes = [rf.prediction, xgb.prediction, cnn.prediction];
+  const covidCount = votes.filter(v => v !== 'healthy').length;
+  const finalConsensus = covidCount >= 2 ? 'covid' : 'healthy';
+  verdictEl.textContent = finalConsensus.toUpperCase();
+  verdictEl.className = `verdict-value ${finalConsensus === 'healthy' ? 'healthy' : 'covid'}`;
 
   results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
