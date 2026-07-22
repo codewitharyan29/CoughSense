@@ -271,6 +271,40 @@
     padding-top: 16px;
   }
 
+  .next-steps {
+    margin-top: 20px;
+    padding: 16px 18px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--bg-panel-raised, #182823);
+  }
+  .next-steps.covid { border-color: var(--warn-dim); }
+  .next-steps.healthy { border-color: var(--signal-dim); }
+  .next-steps-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .next-steps.covid .next-steps-title { color: var(--warn); }
+  .next-steps.healthy .next-steps-title { color: var(--signal); }
+  .next-steps ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+  .next-steps ul li b { color: var(--text); }
+  .next-steps .urgent {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-size: 11px;
+    color: var(--warn);
+  }
+
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -400,6 +434,8 @@
       <div class="bar-track"><div class="bar-fill" id="cnnBar"></div></div>
       <div class="confidence" id="cnnConf">—</div>
     </div>
+
+    <div class="next-steps" id="nextSteps" style="display:none;"></div>
 
     <div class="disclaimer">
       This is a screening aid based on acoustic patterns, not a medical diagnosis.<br>
@@ -670,7 +706,41 @@ function renderResults(data) {
   verdictEl.textContent = finalConsensus.toUpperCase();
   verdictEl.className = `verdict-value ${finalConsensus === 'healthy' ? 'healthy' : 'covid'}`;
 
+  renderNextSteps(finalConsensus);
+
   results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// General public-health guidance only — NOT medical treatment advice.
+// Always defers to a confirmatory test and a healthcare professional.
+function renderNextSteps(consensus) {
+  const el = document.getElementById('nextSteps');
+  el.style.display = 'block';
+
+  if (consensus === 'covid') {
+    el.className = 'next-steps covid';
+    el.innerHTML = `
+      <div class="next-steps-title">⚠ Suggested Next Steps</div>
+      <ul>
+        <li><b>Get a confirmatory test</b> (RT-PCR or rapid antigen) — this tool screens acoustic patterns only, it does not diagnose.</li>
+        <li><b>Isolate from others</b> where possible until you have a confirmed result.</li>
+        <li><b>Monitor your symptoms</b> — track fever, cough, and breathing over the next 24–48 hours.</li>
+        <li><b>Contact a doctor or telehealth service</b> to discuss your symptoms and next steps.</li>
+        <li>Wear a mask around others and maintain good ventilation.</li>
+      </ul>
+      <div class="urgent">🚨 Seek emergency care immediately if you experience difficulty breathing, persistent chest pain, confusion, or bluish lips/face.</div>
+    `;
+  } else {
+    el.className = 'next-steps healthy';
+    el.innerHTML = `
+      <div class="next-steps-title">✓ Suggested Next Steps</div>
+      <ul>
+        <li>No strong acoustic signal of COVID-19 was detected in this clip.</li>
+        <li><b>Still monitor</b> — if symptoms develop or worsen, consider a confirmatory test.</li>
+        <li>This is a screening aid with limited accuracy on a small dataset — when in doubt, consult a healthcare professional.</li>
+      </ul>
+    `;
+  }
 }
 
 fetch(`${API_BASE}/api/health`)
