@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoughSense — Acoustic Screening Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="alternate icon" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D1614;
+    --bg-panel: #131F1C;
+    --bg-panel-raised: #182823;
+    --line: #24362F;
+    --signal: #4AF7A0;
+    --signal-dim: #2E9968;
+    --warn: #FFB86B;
+    --warn-dim: #B37D45;
+    --text: #E8F2ED;
+    --text-dim: #7FA396;
+    --text-faint: #4A6359;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: -1px -1px;
+  }
+
+  .wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+    margin-bottom: 36px;
+  }
+
+  .brand {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .brand .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--signal);
+    display: inline-block;
+    box-shadow: 0 0 10px 2px var(--signal);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  .brand small {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-faint);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+
+  .status-badge {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border: 1px solid var(--line);
+    padding: 6px 12px;
+    border-radius: 3px;
+  }
+  .status-badge.online { color: var(--signal); border-color: var(--signal-dim); }
+  .status-badge.offline { color: var(--warn); border-color: var(--warn-dim); }
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .panel-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-label::before {
+    content: '';
+    width: 3px; height: 12px;
+    background: var(--signal-dim);
+  }
+
+  .recorder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 0 8px;
+  }
+
+  canvas#waveform {
+    width: 100%;
+    height: 140px;
+    background: #0A1210;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  button {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 12px 22px;
+    border-radius: 4px;
+    border: 1px solid var(--signal-dim);
+    background: transparent;
+    color: var(--signal);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button:hover:not(:disabled) {
+    background: var(--signal);
+    color: #06120D;
+  }
+  button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  button.record-active {
+    background: var(--warn);
+    border-color: var(--warn);
+    color: #1A1006;
+    animation: rec-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes rec-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,184,107,0.5); }
+    50% { box-shadow: 0 0 0 8px rgba(255,184,107,0); }
+  }
+
+  input[type="file"] { display: none; }
+  label.file-btn {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 12px 22px;
+    border-radius: 4px;
+    border: 1px dashed var(--text-faint);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  label.file-btn:hover { border-color: var(--signal); color: var(--signal); }
+
+  .filename {
+    font-size: 12px;
+    color: var(--text-faint);
+    min-height: 16px;
+  }
+
+  #results { display: none; }
+  #results.show { display: block; }
+
+  .model-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 90px;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .model-row:last-child { border-bottom: none; }
+
+  .model-name {
+    font-size: 12px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .bar-track {
+    height: 8px;
+    background: #0A1210;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .bar-fill.covid { background: linear-gradient(90deg, var(--warn-dim), var(--warn)); }
+  .bar-fill.healthy { background: linear-gradient(90deg, var(--signal-dim), var(--signal)); }
+
+  .confidence {
+    font-size: 14px;
+    font-weight: 600;
+    text-align: right;
+  }
+  .confidence.covid { color: var(--warn); }
+  .confidence.healthy { color: var(--signal); }
+
+  .verdict {
+    text-align: center;
+    padding: 20px 0 8px;
+  }
+  .verdict-label {
+    font-size: 11px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .verdict-value {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 700;
+  }
+  .verdict-value.healthy { color: var(--signal); }
+  .verdict-value.covid { color: var(--warn); }
+
+  .disclaimer {
+    font-size: 11px;
+    color: var(--text-faint);
+    text-align: center;
+    margin-top: 18px;
+    line-height: 1.6;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .stat-card {
+    background: var(--bg-panel-raised);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 18px 16px;
+    text-align: center;
+  }
+  .stat-card .stat-name {
+    font-size: 11px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+  .stat-card .stat-value {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--signal);
+  }
+  .stat-card .stat-std {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .stat-card.best { border-color: var(--signal-dim); }
+  .stat-card.best .stat-value { color: var(--signal); }
+
+  .stats-note {
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 14px;
+    line-height: 1.6;
+  }
+
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 20px 0;
+    color: var(--text-dim);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+  .loading.show { display: block; }
+  .loading .spinner {
+    display: inline-block;
+    width: 10px; height: 10px;
+    background: var(--signal);
+    margin-right: 8px;
+    animation: blink 0.9s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  footer {
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 11px;
+    margin-top: 40px;
+    letter-spacing: 0.03em;
+  }
+
+  @media (max-width: 600px) {
+    .model-row { grid-template-columns: 100px 1fr 70px; }
+    .stats-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span class="dot"></span>
+      CoughSense
+      <small>ACOUSTIC SCREENING v1.0</small>
+    </div>
+    <nav style="display:flex; gap:8px; align-items:center;">
+      <a href="index.html" style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--signal); text-decoration:none; border:1px solid var(--signal-dim); background:rgba(74,247,160,0.06); padding:8px 14px; border-radius:3px;">Screening Tool</a>
+      <a href="dashboard.html" style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); text-decoration:none; border:1px solid var(--line); padding:8px 14px; border-radius:3px;">Dashboard</a>
+      <div class="status-badge" id="apiStatus">CHECKING API...</div>
+    </nav>
+  </header>
+
+  <div class="panel">
+    <div class="panel-label">Input — Record or Upload Cough Sample</div>
+    <div class="recorder">
+      <canvas id="waveform"></canvas>
+      <div class="controls">
+        <button id="recordBtn">● Record</button>
+        <label class="file-btn" for="fileInput">Upload File</label>
+        <input type="file" id="fileInput" accept="audio/*">
+        <button id="analyzeBtn" disabled>Analyze →</button>
+      </div>
+      <div class="filename" id="filename">No audio selected</div>
+    </div>
+    <div class="loading" id="loading"><span class="spinner"></span>Extracting features + running inference...</div>
+  </div>
+
+  <div class="panel" id="results">
+    <div class="panel-label">Screening Result</div>
+
+    <div class="verdict">
+      <div class="verdict-label">Consensus Read</div>
+      <div class="verdict-value" id="verdictValue">—</div>
+    </div>
+
+    <div class="model-row">
+      <div class="model-name">Random Forest</div>
+      <div class="bar-track"><div class="bar-fill" id="rfBar"></div></div>
+      <div class="confidence" id="rfConf">—</div>
+    </div>
+    <div class="model-row">
+      <div class="model-name">CNN (audio)</div>
+      <div class="bar-track"><div class="bar-fill" id="cnnBar"></div></div>
+      <div class="confidence" id="cnnConf">—</div>
+    </div>
+
+    <div class="disclaimer">
+      This is a screening aid based on acoustic patterns, not a medical diagnosis.<br>
+      Consult a healthcare professional for confirmation.
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">Model Performance — 5-Fold Cross-Validation</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-name">Random Forest</div>
+        <div class="stat-value">83.5%</div>
+        <div class="stat-std">± 6.9%</div>
+      </div>
+      <div class="stat-card best">
+        <div class="stat-name">XGBoost</div>
+        <div class="stat-value">85.1%</div>
+        <div class="stat-std">± 6.2%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-name">CNN (augmented)</div>
+        <div class="stat-value">78.5%</div>
+        <div class="stat-std">± 9.3%</div>
+      </div>
+    </div>
+    <div class="stats-note">
+      Trained on 121 clinically-labeled cough clips (Virufy dataset). XGBoost is the most reliable
+      performer at this data scale; CNN accuracy is data-limited and would improve with a larger corpus.
+    </div>
+  </div>
+
+  <footer>Team Auscultate — CoughSense Prototype — Not for clinical use</footer>
+
+</div>
+
+<script>
+const API_BASE = "";  // same-origin: frontend and backend served together
+
+const canvas = document.getElementById('waveform');
+const ctx = canvas.getContext('2d');
+function sizeCanvas() {
+  canvas.width = canvas.clientWidth * devicePixelRatio;
+  canvas.height = canvas.clientHeight * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+}
+sizeCanvas();
+
+function drawIdleLine() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = '#24362F';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, h/2);
+  ctx.lineTo(w, h/2);
+  ctx.stroke();
+}
+drawIdleLine();
+
+let audioBlob = null;
+let audioContext, analyser, dataArray, sourceNode, mediaRecorder, chunks = [];
+let animationId;
+
+function drawLiveWaveform() {
+  analyser.getByteTimeDomainData(dataArray);
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#4AF7A0';
+  ctx.shadowColor = '#4AF7A0';
+  ctx.shadowBlur = 6;
+  ctx.beginPath();
+  const sliceWidth = w / dataArray.length;
+  let x = 0;
+  for (let i = 0; i < dataArray.length; i++) {
+    const v = dataArray[i] / 128.0;
+    const y = (v * h) / 2;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    x += sliceWidth;
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  animationId = requestAnimationFrame(drawLiveWaveform);
+}
+
+function drawStaticWaveform(buffer) {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+  const data = buffer.getChannelData(0);
+  const step = Math.ceil(data.length / w);
+  ctx.strokeStyle = '#4AF7A0';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < w; i++) {
+    let min = 1.0, max = -1.0;
+    for (let j = 0; j < step; j++) {
+      const datum = data[(i * step) + j] || 0;
+      if (datum < min) min = datum;
+      if (datum > max) max = datum;
+    }
+    ctx.moveTo(i, (1 + min) * h / 2);
+    ctx.lineTo(i, (1 + max) * h / 2);
+  }
+  ctx.stroke();
+}
+
+const recordBtn = document.getElementById('recordBtn');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const filenameEl = document.getElementById('filename');
+const fileInput = document.getElementById('fileInput');
+
+let isRecording = false;
+
+recordBtn.addEventListener('click', async () => {
+  if (!isRecording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      sourceNode = audioContext.createMediaStreamSource(stream);
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      dataArray = new Uint8Array(analyser.fftSize);
+      sourceNode.connect(analyser);
+      drawLiveWaveform();
+
+      chunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        filenameEl.textContent = `Recorded clip (${(audioBlob.size/1024).toFixed(0)} KB)`;
+        analyzeBtn.disabled = false;
+        cancelAnimationFrame(animationId);
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorder.start();
+      isRecording = true;
+      recordBtn.textContent = '■ Stop';
+      recordBtn.classList.add('record-active');
+      document.getElementById('results').classList.remove('show');
+    } catch (err) {
+      alert('Microphone access denied or unavailable. Try uploading a file instead.');
+    }
+  } else {
+    mediaRecorder.stop();
+    isRecording = false;
+    recordBtn.textContent = '● Record';
+    recordBtn.classList.remove('record-active');
+  }
+});
+
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  audioBlob = file;
+  filenameEl.textContent = file.name;
+  analyzeBtn.disabled = false;
+  document.getElementById('results').classList.remove('show');
+
+  const arrayBuffer = await file.arrayBuffer();
+  const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
+  try {
+    const audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
+    drawStaticWaveform(audioBuffer);
+  } catch (err) {
+    drawIdleLine();
+  }
+});
+
+analyzeBtn.addEventListener('click', async () => {
+  if (!audioBlob) return;
+  const loading = document.getElementById('loading');
+  loading.classList.add('show');
+  analyzeBtn.disabled = true;
+
+  const formData = new FormData();
+  formData.append('file', audioBlob, audioBlob.name || 'recording.webm');
+
+  try {
+    const res = await fetch(`${API_BASE}/predict`, { method: 'POST', body: formData });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    renderResults(data);
+  } catch (err) {
+    alert('Could not reach the CoughSense API. Make sure uvicorn is running on port 8000.\n\n' + err.message);
+  } finally {
+    loading.classList.remove('show');
+    analyzeBtn.disabled = false;
+  }
+});
+
+function renderResults(data) {
+  const results = document.getElementById('results');
+  results.classList.add('show');
+
+  const rf = data.random_forest;
+  const cnn = data.cnn;
+
+  const rfClass = rf.prediction === 'healthy' ? 'healthy' : 'covid';
+  const cnnClass = cnn.prediction === 'healthy' ? 'healthy' : 'covid';
+
+  document.getElementById('rfBar').className = `bar-fill ${rfClass}`;
+  document.getElementById('rfBar').style.width = `${rf.confidence * 100}%`;
+  document.getElementById('rfConf').className = `confidence ${rfClass}`;
+  document.getElementById('rfConf').textContent = `${(rf.confidence * 100).toFixed(0)}%`;
+
+  document.getElementById('cnnBar').className = `bar-fill ${cnnClass}`;
+  document.getElementById('cnnBar').style.width = `${cnn.confidence * 100}%`;
+  document.getElementById('cnnConf').className = `confidence ${cnnClass}`;
+  document.getElementById('cnnConf').textContent = `${(cnn.confidence * 100).toFixed(0)}%`;
+
+  const verdictEl = document.getElementById('verdictValue');
+  const consensus = rf.prediction;
+  verdictEl.textContent = consensus.toUpperCase();
+  verdictEl.className = `verdict-value ${consensus === 'healthy' ? 'healthy' : 'covid'}`;
+
+  results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+fetch(`${API_BASE}/api/health`)
+  .then(res => res.json())
+  .then(() => {
+    const badge = document.getElementById('apiStatus');
+    badge.textContent = 'API ONLINE';
+    badge.className = 'status-badge online';
+  })
+  .catch(() => {
+    const badge = document.getElementById('apiStatus');
+    badge.textContent = 'API OFFLINE';
+    badge.className = 'status-badge offline';
+  });
+
+window.addEventListener('resize', () => {
+  sizeCanvas();
+  drawIdleLine();
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoughSense — Model Analytics</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="alternate icon" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D1614;
+    --bg-panel: #131F1C;
+    --bg-panel-raised: #182823;
+    --line: #24362F;
+    --signal: #4AF7A0;
+    --signal-dim: #2E9968;
+    --warn: #FFB86B;
+    --warn-dim: #B37D45;
+    --blue: #6BB6FF;
+    --blue-dim: #3D6E99;
+    --text: #E8F2ED;
+    --text-dim: #7FA396;
+    --text-faint: #4A6359;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: -1px -1px;
+  }
+
+  .wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+    margin-bottom: 12px;
+  }
+
+  .brand {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .brand .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--signal);
+    display: inline-block;
+    box-shadow: 0 0 10px 2px var(--signal);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .brand small {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-faint);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+
+  nav { display: flex; gap: 8px; }
+  nav a {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    padding: 8px 14px;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+  }
+  nav a:hover { color: var(--signal); border-color: var(--signal-dim); }
+  nav a.active { color: var(--signal); border-color: var(--signal-dim); background: rgba(74,247,160,0.06); }
+
+  .subhead {
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-bottom: 32px;
+  }
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .panel-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-label::before { content: ''; width: 3px; height: 12px; background: var(--signal-dim); }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  /* Dataset composition */
+  .composition-bar {
+    display: flex;
+    height: 28px;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 10px 0 12px;
+    border: 1px solid var(--line);
+  }
+  .comp-segment { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+  .comp-segment.covid { background: var(--warn-dim); color: #1A1006; }
+  .comp-segment.healthy { background: var(--signal-dim); color: #06120D; }
+  .legend { display: flex; gap: 20px; font-size: 11px; color: var(--text-dim); }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .swatch.covid { background: var(--warn); }
+  .swatch.healthy { background: var(--signal); }
+  .swatch.blue { background: var(--blue); }
+
+  .split-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .split-stat { text-align: center; padding: 12px; background: var(--bg-panel-raised); border-radius: 4px; border: 1px solid var(--line); }
+  .split-stat .n { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--blue); }
+  .split-stat .l { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+
+  /* Model comparison bars */
+  .compare-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 28px;
+    height: 200px;
+    padding: 10px 10px 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 8px;
+  }
+  .compare-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; }
+  .compare-bar-wrap { width: 56px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; position: relative; }
+  .compare-bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    position: relative;
+    transition: height 0.8s cubic-bezier(0.22,1,0.36,1);
+  }
+  .compare-bar.rf { background: linear-gradient(180deg, var(--blue), var(--blue-dim)); }
+  .compare-bar.xgb { background: linear-gradient(180deg, var(--signal), var(--signal-dim)); }
+  .compare-bar.cnn { background: linear-gradient(180deg, var(--warn), var(--warn-dim)); }
+  .err-whisker {
+    position: absolute;
+    left: 50%;
+    width: 1px;
+    background: rgba(255,255,255,0.4);
+    transform: translateX(-50%);
+  }
+  .compare-value { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .compare-labels { display: flex; gap: 28px; padding: 0 10px; }
+  .compare-label-col { flex: 1; text-align: center; }
+  .compare-label-col .name { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+  .compare-label-col .std { font-size: 10px; color: var(--text-faint); margin-top: 2px; }
+
+  /* Fold breakdown */
+  .fold-chart { display: flex; gap: 14px; align-items: flex-end; height: 160px; padding-top: 10px; border-bottom: 1px solid var(--line); }
+  .fold-group { flex: 1; display: flex; gap: 4px; align-items: flex-end; height: 100%; justify-content: center; }
+  .fold-bar { width: 12px; border-radius: 2px 2px 0 0; transition: height 0.6s ease; }
+  .fold-bar.rf { background: var(--blue); }
+  .fold-bar.xgb { background: var(--signal); }
+  .fold-bar.cnn { background: var(--warn); }
+  .fold-labels { display: flex; gap: 14px; margin-top: 8px; }
+  .fold-label-item { flex: 1; text-align: center; font-size: 10px; color: var(--text-faint); }
+
+  /* Confusion matrices */
+  .cm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .cm-block { text-align: center; }
+  .cm-title { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+  .cm-table { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; max-width: 160px; margin: 0 auto; }
+  .cm-cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    border-radius: 4px;
+    color: #06120D;
+  }
+  .cm-axis { font-size: 9px; color: var(--text-faint); margin-top: 8px; letter-spacing: 0.03em; }
+
+  /* Feature importance */
+  .feat-row { display: grid; grid-template-columns: 110px 1fr 50px; align-items: center; gap: 12px; padding: 8px 0; }
+  .feat-name { font-size: 11px; color: var(--text-dim); }
+  .feat-track { height: 14px; background: #0A1210; border-radius: 3px; overflow: hidden; }
+  .feat-fill { height: 100%; background: linear-gradient(90deg, var(--blue-dim), var(--blue)); border-radius: 3px; }
+  .feat-value { font-size: 11px; color: var(--text-faint); text-align: right; }
+
+  .note {
+    font-size: 11px;
+    color: var(--text-faint);
+    line-height: 1.6;
+    margin-top: 14px;
+  }
+
+  footer { text-align: center; color: var(--text-faint); font-size: 11px; margin-top: 40px; letter-spacing: 0.03em; }
+
+  .exp-compare { display: flex; align-items: flex-end; justify-content: center; gap: 20px; padding: 10px 0; }
+  .exp-col { display: flex; flex-direction: column; align-items: center; flex: 1; max-width: 160px; }
+  .exp-bar-wrap { width: 100%; height: 130px; display: flex; align-items: flex-end; justify-content: center; }
+  .exp-bar { width: 60px; border-radius: 4px 4px 0 0; transition: height 0.8s cubic-bezier(0.22,1,0.36,1); }
+  .exp-bar.clean { background: linear-gradient(180deg, var(--signal), var(--signal-dim)); }
+  .exp-bar.dirty { background: linear-gradient(180deg, var(--warn), var(--warn-dim)); }
+  .exp-val { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-top: 10px; }
+  .exp-label { font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 6px; line-height: 1.4; }
+  .exp-label span { font-size: 10px; color: var(--text-faint); }
+  .exp-arrow { font-size: 24px; color: var(--text-faint); padding-bottom: 60px; }
+
+  @media (max-width: 700px) {
+    .exp-arrow { display: none; }
+    .exp-compare { flex-wrap: wrap; gap: 12px; }
+  }
+
+  @media (max-width: 700px) {
+    .row2 { grid-template-columns: 1fr; }
+    .cm-grid { grid-template-columns: 1fr; }
+    .split-stats { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span class="dot"></span>
+      CoughSense
+      <small>MODEL ANALYTICS</small>
+    </div>
+    <nav>
+      <a href="index.html">Screening Tool</a>
+      <a href="dashboard.html" class="active">Dashboard</a>
+    </nav>
+  </header>
+  <div class="subhead">Team Auscultate — trained on 121 clinically-labeled cough clips (Virufy dataset)</div>
+
+  <!-- Dataset composition -->
+  <div class="panel">
+    <div class="panel-label">Dataset Composition</div>
+    <div class="composition-bar">
+      <div class="comp-segment covid" style="width: 39.7%">48 covid</div>
+      <div class="comp-segment healthy" style="width: 60.3%">73 healthy</div>
+    </div>
+    <div class="legend">
+      <span><span class="swatch covid"></span>COVID-positive (39.7%)</span>
+      <span><span class="swatch healthy"></span>Healthy (60.3%)</span>
+    </div>
+    <div class="split-stats">
+      <div class="split-stat"><div class="n">84</div><div class="l">Train (before aug.)</div></div>
+      <div class="split-stat"><div class="n">18</div><div class="l">Validation</div></div>
+      <div class="split-stat"><div class="n">19</div><div class="l">Test</div></div>
+    </div>
+    <div class="note">Train set expanded to 336 clips via 4x augmentation (noise injection, pitch shift, time shift) — applied only after the split, so validation/test remain untouched originals.</div>
+  </div>
+
+  <!-- Model comparison -->
+  <div class="panel">
+    <div class="panel-label">Model Comparison — 5-Fold Cross-Validation Mean Accuracy</div>
+    <div class="compare-chart" id="compareChart">
+      <div class="compare-col">
+        <div class="compare-value" style="color: var(--blue)">83.5%</div>
+        <div class="compare-bar-wrap">
+          <div class="err-whisker" style="height: 28px; top: -8px;"></div>
+          <div class="compare-bar rf" style="height: 83.5%"></div>
+        </div>
+      </div>
+      <div class="compare-col">
+        <div class="compare-value" style="color: var(--signal)">85.1%</div>
+        <div class="compare-bar-wrap">
+          <div class="err-whisker" style="height: 28px; top: -8px;"></div>
+          <div class="compare-bar xgb" style="height: 85.1%"></div>
+        </div>
+      </div>
+      <div class="compare-col">
+        <div class="compare-value" style="color: var(--warn)">78.5%</div>
+        <div class="compare-bar-wrap">
+          <div class="err-whisker" style="height: 30px; top: -8px;"></div>
+          <div class="compare-bar cnn" style="height: 78.5%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="compare-labels">
+      <div class="compare-label-col"><div class="name">Random Forest</div><div class="std">± 6.9%</div></div>
+      <div class="compare-label-col"><div class="name">XGBoost</div><div class="std">± 6.2%</div></div>
+      <div class="compare-label-col"><div class="name">CNN (augmented)</div><div class="std">± 9.3%</div></div>
+    </div>
+  </div>
+
+  <!-- Fold breakdown -->
+  <div class="panel">
+    <div class="panel-label">Per-Fold Accuracy Breakdown</div>
+    <div class="fold-chart" id="foldChart"></div>
+    <div class="fold-labels">
+      <div class="fold-label-item">Fold 1</div>
+      <div class="fold-label-item">Fold 2</div>
+      <div class="fold-label-item">Fold 3</div>
+      <div class="fold-label-item">Fold 4</div>
+      <div class="fold-label-item">Fold 5</div>
+    </div>
+    <div class="legend" style="margin-top: 14px;">
+      <span><span class="swatch blue"></span>Random Forest</span>
+      <span><span class="swatch healthy"></span>XGBoost</span>
+      <span><span class="swatch covid"></span>CNN</span>
+    </div>
+    <div class="note">Variance across folds (RF ±6.9pp, XGB ±6.2pp, CNN ±9.3pp) is why a single train/test split shouldn't be trusted alone on a dataset this size — a single unlucky fold can swing 15-20 points.</div>
+  </div>
+
+  <!-- Confusion matrices -->
+  <div class="panel">
+    <div class="panel-label">Confusion Matrices (single held-out test split)</div>
+    <div class="cm-grid">
+      <div class="cm-block">
+        <div class="cm-title">Random Forest</div>
+        <div class="cm-table">
+          <div class="cm-cell" style="background: var(--warn);">8</div>
+          <div class="cm-cell" style="background: rgba(255,184,107,0.15); color: var(--text-faint);">2</div>
+          <div class="cm-cell" style="background: rgba(74,247,160,0.15); color: var(--text-faint);">0</div>
+          <div class="cm-cell" style="background: var(--signal);">15</div>
+        </div>
+        <div class="cm-axis">rows: actual · cols: predicted<br>covid / healthy</div>
+      </div>
+      <div class="cm-block">
+        <div class="cm-title">XGBoost</div>
+        <div class="cm-table">
+          <div class="cm-cell" style="background: var(--warn);">9</div>
+          <div class="cm-cell" style="background: rgba(255,184,107,0.15); color: var(--text-faint);">1</div>
+          <div class="cm-cell" style="background: rgba(74,247,160,0.15); color: var(--text-faint);">0</div>
+          <div class="cm-cell" style="background: var(--signal);">15</div>
+        </div>
+        <div class="cm-axis">rows: actual · cols: predicted<br>covid / healthy</div>
+      </div>
+      <div class="cm-block">
+        <div class="cm-title">CNN (augmented)</div>
+        <div class="cm-table">
+          <div class="cm-cell" style="background: var(--warn);">6</div>
+          <div class="cm-cell" style="background: rgba(255,184,107,0.4); color: #1A1006;">2</div>
+          <div class="cm-cell" style="background: rgba(74,247,160,0.3); color: #06120D;">1</div>
+          <div class="cm-cell" style="background: var(--signal);">10</div>
+        </div>
+        <div class="cm-axis">rows: actual · cols: predicted<br>covid / healthy</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature importance -->
+  <div class="panel">
+    <div class="panel-label">Top 10 Feature Importances — Random Forest</div>
+    <div id="featChart"></div>
+    <div class="note">MFCC coefficients (timbral texture of the cough) dominate — consistent with clinical intuition that "wet vs. dry" cough quality carries diagnostic signal.</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">Experiment — Data Quality vs Quantity</div>
+    <div class="note" style="margin-top:0; margin-bottom:16px;">
+      We tested whether adding more data helps. Scaling from 121 clinical clips to 321 by adding
+      crowdsourced COUGHVID recordings <b style="color:var(--warn)">dropped accuracy from 85% to 65%</b> —
+      because self-reported crowdsourced labels are far noisier than lab-confirmed clinical ones.
+      Quality filters (cough-detection ≥ 0.8, SNR sorting) recovered only a few points.
+    </div>
+
+    <div class="exp-compare">
+      <div class="exp-col">
+        <div class="exp-bar-wrap">
+          <div class="exp-bar clean" style="height: 85%"></div>
+        </div>
+        <div class="exp-val" style="color:var(--signal)">85.1%</div>
+        <div class="exp-label">Clinical only<br><span>121 clips · lab-verified</span></div>
+      </div>
+      <div class="exp-arrow">→</div>
+      <div class="exp-col">
+        <div class="exp-bar-wrap">
+          <div class="exp-bar dirty" style="height: 65%"></div>
+        </div>
+        <div class="exp-val" style="color:var(--warn)">64.5%</div>
+        <div class="exp-label">+ Crowdsourced<br><span>321 clips · self-reported</span></div>
+      </div>
+      <div class="exp-arrow">→</div>
+      <div class="exp-col">
+        <div class="exp-bar-wrap">
+          <div class="exp-bar clean" style="height: 85%"></div>
+        </div>
+        <div class="exp-val" style="color:var(--signal)">85.1%</div>
+        <div class="exp-label">Final decision<br><span>clinical data kept</span></div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:16px;">
+      <b style="color:var(--signal)">Lesson: in medical ML, data quality beats quantity.</b>
+      We also tested a Random-Forest + XGBoost ensemble and an enriched 102-feature set (delta-MFCCs,
+      spectral contrast) — neither beat the simple 37-feature XGBoost, confirming the final model is
+      already well-matched to the problem.
+    </div>
+  </div>
+
+  <footer>Team Auscultate — CoughSense Prototype — Not for clinical use</footer>
+
+</div>
+
+<script>
+// Fold-by-fold data (from actual 5-fold CV run)
+const foldData = {
+  rf:  [0.800, 0.917, 0.792, 0.750, 0.917],
+  xgb: [0.760, 0.958, 0.792, 0.833, 0.875],
+  cnn: [0.800, 0.708, 0.708, 0.750, 0.958],
+};
+
+const foldChart = document.getElementById('foldChart');
+for (let i = 0; i < 5; i++) {
+  const group = document.createElement('div');
+  group.className = 'fold-group';
+  ['rf', 'xgb', 'cnn'].forEach(model => {
+    const bar = document.createElement('div');
+    bar.className = `fold-bar ${model}`;
+    bar.style.height = `${foldData[model][i] * 100}%`;
+    bar.title = `${model.toUpperCase()} Fold ${i+1}: ${(foldData[model][i]*100).toFixed(1)}%`;
+    group.appendChild(bar);
+  });
+  foldChart.appendChild(group);
+}
+
+// Feature importance data (from actual Random Forest run)
+const features = [
+  { name: 'mfcc_6_mean', value: 0.0821 },
+  { name: 'mfcc_12_mean', value: 0.0689 },
+  { name: 'mfcc_3_mean', value: 0.0598 },
+  { name: 'mfcc_6_std', value: 0.0537 },
+  { name: 'mfcc_0_mean', value: 0.0531 },
+  { name: 'mfcc_9_mean', value: 0.0438 },
+  { name: 'zcr_std', value: 0.0386 },
+  { name: 'spec_rolloff_mean', value: 0.0376 },
+  { name: 'mfcc_7_std', value: 0.0335 },
+  { name: 'mfcc_8_std', value: 0.0316 },
+];
+const maxFeat = Math.max(...features.map(f => f.value));
+const featChart = document.getElementById('featChart');
+features.forEach(f => {
+  const row = document.createElement('div');
+  row.className = 'feat-row';
+  row.innerHTML = `
+    <div class="feat-name">${f.name}</div>
+    <div class="feat-track"><div class="feat-fill" style="width: ${(f.value/maxFeat*100).toFixed(1)}%"></div></div>
+    <div class="feat-value">${f.value.toFixed(3)}</div>
+  `;
+  featChart.appendChild(row);
+});
+</script>
+
+</body>
+</html>
