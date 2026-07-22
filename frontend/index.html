@@ -354,6 +354,7 @@
       <small>ACOUSTIC SCREENING v1.0</small>
     </div>
     <nav style="display:flex; gap:8px; align-items:center;">
+      <a href="home.html" style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); text-decoration:none; border:1px solid var(--line); padding:8px 14px; border-radius:3px;">Home</a>
       <a href="index.html" style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--signal); text-decoration:none; border:1px solid var(--signal-dim); background:rgba(74,247,160,0.06); padding:8px 14px; border-radius:3px;">Screening Tool</a>
       <a href="dashboard.html" style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim); text-decoration:none; border:1px solid var(--line); padding:8px 14px; border-radius:3px;">Dashboard</a>
       <div class="status-badge" id="apiStatus">CHECKING API...</div>
@@ -371,6 +372,7 @@
         <button id="analyzeBtn" disabled>Analyze →</button>
       </div>
       <div class="filename" id="filename">No audio selected</div>
+      <audio id="audioPlayer" controls style="width:100%; margin-top:4px; display:none;"></audio>
     </div>
     <div class="loading" id="loading"><span class="spinner"></span>Extracting features + running inference...</div>
   </div>
@@ -528,6 +530,9 @@ recordBtn.addEventListener('click', async () => {
         analyzeBtn.disabled = false;
         cancelAnimationFrame(animationId);
         stream.getTracks().forEach(t => t.stop());
+        const player = document.getElementById('audioPlayer');
+        player.src = URL.createObjectURL(audioBlob);
+        player.style.display = 'block';
       };
       mediaRecorder.start();
       isRecording = true;
@@ -552,6 +557,10 @@ fileInput.addEventListener('change', async (e) => {
   filenameEl.textContent = file.name;
   analyzeBtn.disabled = false;
   document.getElementById('results').classList.remove('show');
+
+  const player = document.getElementById('audioPlayer');
+  player.src = URL.createObjectURL(file);
+  player.style.display = 'block';
 
   const arrayBuffer = await file.arrayBuffer();
   const tempCtx = new (window.AudioContext || window.webkitAudioContext)();

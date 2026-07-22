@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoughSense — AI Cough-Based Respiratory Screening</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D1614;
+    --bg-panel: #131F1C;
+    --bg-panel-raised: #182823;
+    --line: #24362F;
+    --signal: #4AF7A0;
+    --signal-dim: #2E9968;
+    --warn: #FFB86B;
+    --warn-dim: #B37D45;
+    --blue: #6BB6FF;
+    --blue-dim: #3D6E99;
+    --text: #E8F2ED;
+    --text-dim: #7FA396;
+    --text-faint: #4A6359;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: -1px -1px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 8px;
+  }
+  .brand { font-family: var(--font-display); font-size: 22px; font-weight: 700; display: flex; align-items: baseline; gap: 8px; }
+  .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 8px 2px var(--signal); animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  nav { display: flex; gap: 8px; }
+  nav a {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim);
+    text-decoration: none; border: 1px solid var(--line); padding: 8px 14px; border-radius: 3px; transition: all .15s ease;
+  }
+  nav a:hover { color: var(--signal); border-color: var(--signal-dim); }
+  nav a.active { color: var(--signal); border-color: var(--signal-dim); background: rgba(74,247,160,.06); }
+
+  /* Hero */
+  .hero { text-align: center; padding: 56px 0 40px; }
+  .hero-eyebrow { font-size: 12px; letter-spacing: .15em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 18px; }
+  .hero h1 { font-family: var(--font-display); font-size: 44px; font-weight: 700; margin: 0 0 14px; letter-spacing: -0.02em; line-height: 1.1; }
+  .hero h1 .accent { color: var(--signal); }
+  .hero p { font-size: 15px; color: var(--text-dim); max-width: 620px; margin: 0 auto 30px; line-height: 1.7; }
+  .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .cta {
+    font-family: var(--font-mono); font-size: 13px; font-weight: 500; letter-spacing: .03em; text-transform: uppercase;
+    padding: 13px 26px; border-radius: 4px; text-decoration: none; transition: all .15s ease; border: 1px solid var(--signal-dim);
+  }
+  .cta.primary { background: var(--signal); color: #06120D; }
+  .cta.primary:hover { background: #6dffb8; }
+  .cta.secondary { color: var(--signal); background: transparent; }
+  .cta.secondary:hover { background: rgba(74,247,160,.08); }
+  .cta.ghost { color: var(--text-dim); border-color: var(--line); }
+  .cta.ghost:hover { color: var(--text); border-color: var(--text-faint); }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 44px 0; }
+  .stat-card { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 6px; padding: 20px 14px; text-align: center; }
+  .stat-card .v { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--signal); }
+  .stat-card .l { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .06em; margin-top: 6px; }
+
+  /* Panels */
+  .panel { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 6px; padding: 26px; margin-bottom: 20px; }
+  .panel-label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--text-faint); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .panel-label::before { content: ''; width: 3px; height: 12px; background: var(--signal-dim); }
+  .panel p { font-size: 13px; line-height: 1.75; color: var(--text-dim); margin: 0 0 10px; }
+  .panel p:last-child { margin-bottom: 0; }
+  .panel p b { color: var(--text); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  .value-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .value-list li { font-size: 13px; color: var(--text-dim); line-height: 1.6; padding-left: 20px; position: relative; }
+  .value-list li::before { content: '▸'; position: absolute; left: 0; color: var(--signal); }
+  .value-list li b { color: var(--text); }
+
+  .exp-strip {
+    display: flex; align-items: center; justify-content: center; gap: 18px; padding: 18px 0; flex-wrap: wrap;
+  }
+  .exp-num { text-align: center; }
+  .exp-num .v { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+  .exp-num .l { font-size: 10px; color: var(--text-faint); text-transform: uppercase; margin-top: 4px; }
+  .exp-arrow { color: var(--text-faint); font-size: 18px; }
+
+  .team-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .team-card { flex: 1; min-width: 220px; background: var(--bg-panel-raised); border: 1px solid var(--line); border-radius: 4px; padding: 16px; }
+  .team-card .name { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--text); }
+  .team-card .role { font-size: 11px; color: var(--signal); text-transform: uppercase; letter-spacing: .04em; margin: 4px 0 10px; }
+  .team-card .desc { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+
+  footer { text-align: center; color: var(--text-faint); font-size: 11px; margin-top: 40px; letter-spacing: .03em; }
+  footer a { color: var(--text-dim); }
+
+  @media (max-width: 700px) {
+    .hero h1 { font-size: 30px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .two-col { grid-template-columns: 1fr; }
+    .exp-strip { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand"><span class="dot"></span>CoughSense</div>
+    <nav>
+      <a href="home.html" class="active">Home</a>
+      <a href="index.html">Screening Tool</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="https://github.com/codewitharyan29/CoughSense" target="_blank">GitHub</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div class="hero-eyebrow">Team Auscultate — Machine Learning &amp; Deep Learning</div>
+    <h1>Screen for respiratory illness<br>from a <span class="accent">cough</span>.</h1>
+    <p>CoughSense analyzes short cough recordings and flags likely respiratory conditions using
+       Random Forest, XGBoost, and a CNN — no lab, no clinic visit, just a microphone.</p>
+    <div class="cta-row">
+      <a href="index.html" class="cta primary">Try the Screening Tool →</a>
+      <a href="dashboard.html" class="cta secondary">View Analytics Dashboard</a>
+      <a href="https://github.com/codewitharyan29/CoughSense" target="_blank" class="cta ghost">GitHub Repo</a>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="v">85.1%</div><div class="l">Best Accuracy (XGBoost)</div></div>
+    <div class="stat-card"><div class="v">3</div><div class="l">Models Compared</div></div>
+    <div class="stat-card"><div class="v">121</div><div class="l">Clinical Cough Clips</div></div>
+    <div class="stat-card"><div class="v">5-fold</div><div class="l">Cross-Validated</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">The Problem</div>
+    <p>Access to respiratory screening is limited in low-resource settings — clinics are far, tests
+       cost money, results take time. Yet a cough carries information clinicians already listen for:
+       wet vs. dry, productive vs. barking. <b>If a machine can learn those same acoustic patterns,
+       screening becomes as accessible as a phone call.</b></p>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-label">Our Approach</div>
+      <ul class="value-list">
+        <li><b>Feature extraction</b> — MFCCs, spectral features for classical ML; log-mel spectrograms for deep learning.</li>
+        <li><b>Three models, compared honestly</b> — Random Forest, XGBoost, and a compact CNN.</li>
+        <li><b>Explainable</b> — SHAP analysis shows exactly which acoustic features drive each prediction.</li>
+        <li><b>Rigorously evaluated</b> — every number is 5-fold cross-validated, reported with its variance.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="panel-label">Why It Matters</div>
+      <ul class="value-list">
+        <li><b>Underexplored modality</b> — audio biomarkers get far less attention than image or text ML.</li>
+        <li><b>Real-world value</b> — instant pre-screening anywhere a phone works.</li>
+        <li><b>Transparent, not a black box</b> — decisions are explainable and clinically grounded.</li>
+        <li><b>Honest science</b> — limitations are documented, not hidden.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">A Real Experiment: Quality vs. Quantity</div>
+    <p>We tested scaling the dataset from 121 clinical clips to 321 using crowdsourced COUGHVID data.
+       Accuracy <b>dropped</b> from 85% to ~65% — because self-reported labels are far noisier than
+       lab-confirmed ones. We kept the clean clinical data instead.</p>
+    <div class="exp-strip">
+      <div class="exp-num"><div class="v" style="color:var(--signal)">85.1%</div><div class="l">Clinical only</div></div>
+      <div class="exp-arrow">→</div>
+      <div class="exp-num"><div class="v" style="color:var(--warn)">64.5%</div><div class="l">+ Crowdsourced</div></div>
+      <div class="exp-arrow">→</div>
+      <div class="exp-num"><div class="v" style="color:var(--signal)">85.1%</div><div class="l">Final decision</div></div>
+    </div>
+    <p style="text-align:center; margin-top:6px;"><b>Lesson:</b> in medical ML, data quality beats quantity.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">Team Auscultate</div>
+    <div class="team-row">
+      <div class="team-card">
+        <div class="name">Aryan Verma</div>
+        <div class="role">ML / DL Lead</div>
+        <div class="desc">Feature extraction, model training (RF/XGBoost/CNN), cross-validation, SHAP explainability, FastAPI backend.</div>
+      </div>
+      <div class="team-card">
+        <div class="name">Arfa Alam</div>
+        <div class="role">Frontend, Docs &amp; Validation</div>
+        <div class="desc">Screening tool + dashboard UI, technical report and README, testing &amp; validation, dataset organization.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Team Auscultate — CoughSense — Research prototype, not a medical diagnosis.<br>
+    <a href="https://github.com/codewitharyan29/CoughSense" target="_blank">github.com/codewitharyan29/CoughSense</a>
+  </footer>
+
+</div>
+</body>
+</html>
